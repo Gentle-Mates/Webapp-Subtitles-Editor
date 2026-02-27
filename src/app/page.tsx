@@ -28,6 +28,7 @@ export default function Home() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const subtitleListRef = useRef<HTMLDivElement>(null);
     const editContainerRef = useRef<HTMLDivElement>(null);
+    const subtitleElRefs = useRef<Map<number, HTMLElement>>(new Map());
 
     const { status, subtitles, error, transcribe, reset, updateSubtitle } = useTranscription();
     const { translations, isTranslating, translate, syncTimings, updateTranslatedSubtitle, resetTranslations } = useTranslation();
@@ -245,56 +246,98 @@ export default function Home() {
         };
     }, [isDragging, videoSrc]);
 
+    const handleKeyDown = useEffectEvent((e: KeyboardEvent) => {
+        if (!videoSrc || !videoRef.current) {
+            return;
+        }
+
+        const target = e.target as HTMLElement;
+
+        if (
+            (e.code === 'ArrowUp' || e.code === 'ArrowDown') &&
+            !(target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') &&
+            displayedSubtitles.length > 0
+        ) {
+            e.preventDefault();
+
+            const currentIndex = editingId
+                ? displayedSubtitles.findIndex(s => s.id === editingId)
+                : activeSubtitle
+                  ? displayedSubtitles.findIndex(s => s.id === activeSubtitle.id)
+                  : -1;
+
+            const nextIndex =
+                e.code === 'ArrowUp'
+                    ? currentIndex <= 0
+                        ? 0
+                        : currentIndex - 1
+                    : currentIndex < 0
+                      ? 0
+                      : Math.min(currentIndex + 1, displayedSubtitles.length - 1);
+
+            const nextSub = displayedSubtitles[nextIndex];
+
+            if (nextSub) {
+                if (editingId !== null) {
+                    onSaveEdit();
+                }
+
+                startEditing(nextSub);
+                seekTo(nextSub.start);
+            }
+
+            return;
+        }
+
+        if (editingId) {
+            return;
+        }
+
+        switch (e.code) {
+            case 'Space':
+                e.preventDefault();
+
+                if (videoRef.current.paused) {
+                    videoRef.current.play();
+
+                    setIsPlaying(true);
+                } else {
+                    videoRef.current.pause();
+
+                    setIsPlaying(false);
+                }
+
+                break;
+
+            case 'ArrowLeft':
+                e.preventDefault();
+                skip(-5);
+
+                break;
+
+            case 'ArrowRight':
+                e.preventDefault();
+                skip(5);
+
+                break;
+        }
+    });
+
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (!videoSrc || editingId || !videoRef.current) {
-                return;
-            }
-
-            switch (e.code) {
-                case 'Space':
-                    e.preventDefault();
-
-                    if (videoRef.current.paused) {
-                        videoRef.current.play();
-
-                        setIsPlaying(true);
-                    } else {
-                        videoRef.current.pause();
-
-                        setIsPlaying(false);
-                    }
-
-                    break;
-
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    skip(-5);
-
-                    break;
-
-                case 'ArrowRight':
-                    e.preventDefault();
-                    skip(5);
-
-                    break;
-            }
-        };
-
         window.addEventListener('keydown', handleKeyDown);
 
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [videoSrc, editingId]);
+    }, []);
+
+    const handleClickOutside = useEffectEvent((e: MouseEvent) => {
+        if (editContainerRef.current && !editContainerRef.current.contains(e.target as Node)) {
+            onSaveEdit();
+        }
+    });
 
     useEffect(() => {
         if (!editingId) {
             return;
-        }
-
-        function handleClickOutside(e: MouseEvent) {
-            if (editContainerRef.current && !editContainerRef.current.contains(e.target as Node)) {
-                onSaveEdit();
-            }
         }
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -303,16 +346,18 @@ export default function Home() {
     }, [editingId]);
 
     useEffect(() => {
-        if (!activeSubtitle || !subtitleListRef.current) {
+        const id = editingId ?? activeSubtitle?.id;
+
+        if (!id) {
             return;
         }
 
-        const el = subtitleListRef.current.querySelector(`[data-sub-id="${activeSubtitle.id}"]`);
+        const el = subtitleElRefs.current.get(id);
 
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
-    }, [activeSubtitle]);
+    }, [activeSubtitle, editingId]);
 
     const isProcessing = status === 'extracting' || status === 'uploading' || status === 'transcribing';
     const progressLabel = status === 'extracting' ? 'Envoi...' : status === 'uploading' || status === 'transcribing' ? 'Traitement...' : '';
@@ -879,9 +924,16 @@ export default function Home() {
                                     {displayedSubtitles.map(sub =>
                                         editingId === sub.id ? (
                                             <div
-                                                ref={editContainerRef}
+                                                ref={el => {
+                                                    editContainerRef.current = el;
+
+                                                    if (el) {
+                                                        subtitleElRefs.current.set(sub.id, el);
+                                                    } else {
+                                                        subtitleElRefs.current.delete(sub.id);
+                                                    }
+                                                }}
                                                 key={sub.id}
-                                                data-sub-id={sub.id}
                                                 className="w-full px-4 py-3 border-b border-white/5 bg-violet-500/10"
                                             >
                                                 {/* Time editing */}
@@ -932,7 +984,6 @@ export default function Home() {
                                                 </div>
 
                                                 <textarea
-                                                    autoFocus
                                                     value={editText}
                                                     onChange={e => setEditText(e.target.value)}
                                                     onKeyDown={e => {
@@ -946,13 +997,19 @@ export default function Home() {
                                                         }
                                                     }}
                                                     rows={1}
-                                                    className="w-full resize-none rounded border-none bg-white/10 px-2 py-1 text-xs leading-relaxed text-white outline-none focus:ring-1 focus:ring-inset focus:ring-primary"
+                                                    className="w-full [field-sizing:content] resize-none rounded border-none bg-white/10 px-2 py-1 text-xs leading-relaxed text-white outline-none focus:ring-1 focus:ring-inset focus:ring-primary"
                                                 />
                                             </div>
                                         ) : (
                                             <button
+                                                ref={el => {
+                                                    if (el) {
+                                                        subtitleElRefs.current.set(sub.id, el);
+                                                    } else {
+                                                        subtitleElRefs.current.delete(sub.id);
+                                                    }
+                                                }}
                                                 key={sub.id}
-                                                data-sub-id={sub.id}
                                                 onClick={() => seekTo(sub.start)}
                                                 onDoubleClick={() => startEditing(sub)}
                                                 className={`w-full text-left px-4 py-3 border-b border-white/5 transition-all hover:bg-white/5 ${
