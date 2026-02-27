@@ -5,21 +5,10 @@ import { signOut } from 'next-auth/react';
 import type { DragEvent, ChangeEvent } from 'react';
 
 import { generateSRT, downloadSRT } from '@/utils/srt';
+import { formatTime, parseTime } from '@/utils/time';
 
+import ScrubInput from '@/components/ScrubInput';
 import useTranscription from '@/hooks/useTranscription';
-
-function formatTime(seconds: number): string {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 100);
-
-    if (hrs > 0) {
-        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-    }
-
-    return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-}
 
 export default function Home() {
     const [videoSrc, setVideoSrc] = useState<string | null>(null);
@@ -34,10 +23,43 @@ export default function Home() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const subtitleListRef = useRef<HTMLDivElement>(null);
+    const editContainerRef = useRef<HTMLDivElement>(null);
 
-    const { status, subtitles, error, transcribe, reset } = useTranscription();
+    const { status, subtitles, error, transcribe, reset, updateSubtitle } = useTranscription();
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editText, setEditText] = useState('');
+    const [editStart, setEditStart] = useState('');
+    const [editEnd, setEditEnd] = useState('');
 
     const activeSubtitle = subtitles.find(sub => currentTime >= sub.start && currentTime <= sub.end) ?? null;
+
+    function startEditing(sub: { id: number; text: string; start: number; end: number }) {
+        setEditingId(sub.id);
+        setEditText(sub.text);
+        setEditStart(formatTime(sub.start));
+        setEditEnd(formatTime(sub.end));
+    }
+
+    function saveEdit() {
+        if (editingId === null) {
+            return;
+        }
+
+        const start = parseTime(editStart);
+        const end = parseTime(editEnd);
+
+        updateSubtitle(editingId, {
+            text: editText,
+            ...(start ? { start } : {}),
+            ...(end ? { end } : {})
+        });
+
+        setEditingId(null);
+    }
+
+    function cancelEdit() {
+        setEditingId(null);
+    }
 
     function handleFileSelect(file: File) {
         if (file && file.type.startsWith('video/')) {
@@ -188,14 +210,23 @@ export default function Home() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!videoSrc) {
+            if (!videoSrc || editingId || !videoRef.current) {
                 return;
             }
 
             switch (e.code) {
                 case 'Space':
                     e.preventDefault();
-                    togglePlay();
+
+                    if (videoRef.current.paused) {
+                        videoRef.current.play();
+
+                        setIsPlaying(true);
+                    } else {
+                        videoRef.current.pause();
+
+                        setIsPlaying(false);
+                    }
 
                     break;
 
@@ -216,7 +247,36 @@ export default function Home() {
         window.addEventListener('keydown', handleKeyDown);
 
         return () => window.removeEventListener('keydown', handleKeyDown);
-    });
+    }, [videoSrc, editingId]);
+
+    useEffect(() => {
+        if (!editingId) {
+            return;
+        }
+
+        function handleClickOutside(e: MouseEvent) {
+            if (!editingId) {
+                return;
+            }
+
+            if (editContainerRef.current && !editContainerRef.current.contains(e.target as Node)) {
+                const start = parseTime(editStart);
+                const end = parseTime(editEnd);
+
+                updateSubtitle(editingId, {
+                    text: editText,
+                    ...(start ? { start } : {}),
+                    ...(end ? { end } : {})
+                });
+
+                setEditingId(null);
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [editingId, editText, editStart, editEnd, updateSubtitle]);
 
     useEffect(() => {
         if (!activeSubtitle || !subtitleListRef.current) {
@@ -450,7 +510,7 @@ export default function Home() {
                                         onClick={() => setShowSubtitlesOverlay(v => !v)}
                                         className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
                                             showSubtitlesOverlay
-                                                ? 'bg-primary/10 text-secondary'
+                                                ? 'bg-violet-500/10 text-secondary'
                                                 : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
                                         }`}
                                         title="Afficher les sous-titres"
@@ -643,27 +703,102 @@ export default function Home() {
                                     ref={subtitleListRef}
                                     className="flex-1 overflow-y-auto scrollbar-dark"
                                 >
-                                    {subtitles.map(sub => (
-                                        <button
-                                            key={sub.id}
-                                            data-sub-id={sub.id}
-                                            onClick={() => seekTo(sub.start)}
-                                            className={`w-full text-left px-4 py-3 border-b border-white/5 transition-all hover:bg-white/5 ${
-                                                activeSubtitle?.id === sub.id ? 'bg-primary/10' : ''
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-[10px] font-mono text-white/30">{formatTime(sub.start)}</span>
-                                                <span className="text-[10px] text-white/20">&rarr;</span>
-                                                <span className="text-[10px] font-mono text-white/30">{formatTime(sub.end)}</span>
-                                            </div>
-                                            <p
-                                                className={`text-xs leading-relaxed ${activeSubtitle?.id === sub.id ? 'text-white' : 'text-white/60'}`}
+                                    {subtitles.map(sub =>
+                                        editingId === sub.id ? (
+                                            <div
+                                                ref={editContainerRef}
+                                                key={sub.id}
+                                                data-sub-id={sub.id}
+                                                className="w-full px-4 py-3 border-b border-white/5 bg-violet-500/10"
                                             >
-                                                {sub.text}
-                                            </p>
-                                        </button>
-                                    ))}
+                                                {/* Time editing */}
+                                                <div className="flex flex-col gap-1.5 mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <ScrubInput
+                                                            label="Début"
+                                                            value={editStart}
+                                                            onChange={setEditStart}
+                                                            onCommit={saveEdit}
+                                                            onCancel={cancelEdit}
+                                                            onSetCurrent={() => setEditStart(formatTime(currentTime))}
+                                                        />
+                                                        <button
+                                                            onClick={cancelEdit}
+                                                            className="h-6 ml-auto rounded bg-red-600 px-2.5 text-[10px] font-medium text-white transition-all hover:bg-red-500"
+                                                        >
+                                                            Annuler
+                                                        </button>
+                                                    </div>
+
+                                                    <ScrubInput
+                                                        label="Fin"
+                                                        value={editEnd}
+                                                        onChange={setEditEnd}
+                                                        onCommit={saveEdit}
+                                                        onCancel={cancelEdit}
+                                                        onSetCurrent={() => setEditEnd(formatTime(currentTime))}
+                                                    />
+
+                                                    {/* Duration indicator */}
+                                                    {(() => {
+                                                        const start = parseTime(editStart);
+                                                        const end = parseTime(editEnd);
+                                                        const duration = start && end ? end - start : null;
+                                                        const isInvalid = duration && duration <= 0;
+
+                                                        return (
+                                                            <div className="flex items-center gap-1.5 ml-10">
+                                                                <span
+                                                                    className={`text-[10px] font-mono ${isInvalid ? 'text-red-400' : 'text-white/40'}`}
+                                                                >
+                                                                    Durée: {duration ? (isInvalid ? 'invalide' : `${duration.toFixed(2)}s`) : '—'}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                <textarea
+                                                    autoFocus
+                                                    value={editText}
+                                                    onChange={e => setEditText(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            saveEdit();
+                                                        }
+
+                                                        if (e.key === 'Escape') {
+                                                            cancelEdit();
+                                                        }
+                                                    }}
+                                                    rows={1}
+                                                    className="w-full resize-none rounded border-none bg-white/10 px-2 py-1 text-xs leading-relaxed text-white outline-none focus:ring-1 focus:ring-inset focus:ring-primary"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <button
+                                                key={sub.id}
+                                                data-sub-id={sub.id}
+                                                onClick={() => seekTo(sub.start)}
+                                                onDoubleClick={() => startEditing(sub)}
+                                                className={`w-full text-left px-4 py-3 border-b border-white/5 transition-all hover:bg-white/5 ${
+                                                    activeSubtitle?.id === sub.id ? 'bg-violet-500/10' : ''
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-mono text-white/30">{formatTime(sub.start)}</span>
+                                                    <span className="text-[10px] text-white/20">&rarr;</span>
+                                                    <span className="text-[10px] font-mono text-white/30">{formatTime(sub.end)}</span>
+                                                </div>
+                                                <p
+                                                    className={`text-xs leading-relaxed ${activeSubtitle?.id === sub.id ? 'text-white' : 'text-white/60'}`}
+                                                >
+                                                    {sub.text}
+                                                </p>
+                                            </button>
+                                        )
+                                    )}
                                 </div>
                             )}
                         </div>
