@@ -23,6 +23,7 @@ export default function Home() {
     const [duration, setDuration] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [showSubtitlesOverlay, setShowSubtitlesOverlay] = useState(true);
+    const [volume, setVolume] = useState(1);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -147,6 +148,18 @@ export default function Home() {
         videoRef.current.currentTime = time;
 
         setCurrentTime(time);
+    }
+
+    function changeVolume(value: number) {
+        setVolume(value);
+
+        if (videoRef.current) {
+            videoRef.current.volume = value * value;
+        }
+    }
+
+    function toggleMute() {
+        changeVolume(volume > 0 ? 0 : 1);
     }
 
     function handleTimelineChange(e: ChangeEvent<HTMLInputElement>) {
@@ -514,100 +527,188 @@ export default function Home() {
                                 </div>
 
                                 {/* Control buttons */}
-                                <div className="flex items-center justify-center gap-3">
-                                    {/* Previous 5s */}
-                                    <button
-                                        onClick={() => skip(-5)}
-                                        className="group flex h-10 items-center gap-1.5 rounded-full bg-white/5 px-4 text-white/60 transition-all hover:bg-white/10 hover:text-white"
-                                        title="Reculer de 5 secondes"
-                                    >
-                                        <svg
-                                            className="h-4 w-4"
-                                            fill="currentColor"
-                                            viewBox="0 0 24 24"
+                                <div className="flex items-center justify-between">
+                                    {/* Left: Volume */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleMute}
+                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white/60 transition-all hover:bg-white/10 hover:text-white"
+                                            title={volume > 0 ? 'Couper le son' : 'Activer le son'}
                                         >
-                                            <path d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
-                                        </svg>
-                                        <span className="text-xs font-medium">5s</span>
-                                    </button>
-
-                                    {/* Play/Pause */}
-                                    <button
-                                        onClick={togglePlay}
-                                        className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/85 text-white transition-all hover:bg-primary"
-                                        title={isPlaying ? 'Pause' : 'Lecture'}
-                                    >
-                                        {isPlaying ? (
-                                            <svg
-                                                className="h-5 w-5"
-                                                fill="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                                            </svg>
-                                        ) : (
-                                            <svg
-                                                className="h-5 w-5 ml-0.5"
-                                                fill="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
-                                        )}
-                                    </button>
-
-                                    {/* Next 5s */}
-                                    <button
-                                        onClick={() => skip(5)}
-                                        className="group flex h-10 items-center gap-1.5 rounded-full bg-white/5 px-4 text-white/60 transition-all hover:bg-white/10 hover:text-white"
-                                        title="Avancer de 5 secondes"
-                                    >
-                                        <span className="text-xs font-medium">5s</span>
-                                        <svg
-                                            className="h-4 w-4"
-                                            fill="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
-                                        </svg>
-                                    </button>
-
-                                    {/* Show subtitle */}
-                                    <div className="mx-2 h-6 w-px bg-white/10" />
-                                    <button
-                                        onClick={() => setShowSubtitlesOverlay(v => !v)}
-                                        className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
-                                            showSubtitlesOverlay
-                                                ? 'bg-violet-500/10 text-secondary'
-                                                : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
-                                        }`}
-                                        title="Afficher les sous-titres"
-                                    >
-                                        <svg
-                                            className="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth={2}
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+                                            {volume === 0 ? (
+                                                <svg
+                                                    className="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth={2}
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                                                    />
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                                                    />
+                                                </svg>
+                                            ) : volume < 0.5 ? (
+                                                <svg
+                                                    className="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth={2}
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                                                    />
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M15.536 8.464a5 5 0 010 7.072"
+                                                    />
+                                                </svg>
+                                            ) : (
+                                                <svg
+                                                    className="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth={2}
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                                                    />
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728"
+                                                    />
+                                                </svg>
+                                            )}
+                                        </button>
+                                        <div className="relative flex h-6 w-20 items-center">
+                                            <div className="absolute inset-x-0 h-1 rounded-full bg-white/10" />
+                                            <div
+                                                className="absolute h-1 rounded-full bg-white/30"
+                                                style={{ width: `${volume * 100}%` }}
                                             />
-                                        </svg>
-                                    </button>
+                                            <input
+                                                type="range"
+                                                min={0}
+                                                max={1}
+                                                step={0.01}
+                                                value={volume}
+                                                onChange={e => changeVolume(parseFloat(e.target.value))}
+                                                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Center: Back/Skip & Play */}
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => skip(-5)}
+                                            className="group flex h-10 items-center gap-1.5 rounded-full bg-white/5 px-4 text-white/60 transition-all hover:bg-white/10 hover:text-white"
+                                            title="Reculer de 5 secondes"
+                                        >
+                                            <svg
+                                                className="h-4 w-4"
+                                                fill="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                                            </svg>
+                                            <span className="text-xs font-medium">5s</span>
+                                        </button>
+
+                                        <button
+                                            onClick={togglePlay}
+                                            className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/85 text-white transition-all hover:bg-primary"
+                                            title={isPlaying ? 'Pause' : 'Lecture'}
+                                        >
+                                            {isPlaying ? (
+                                                <svg
+                                                    className="h-5 w-5"
+                                                    fill="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                                                </svg>
+                                            ) : (
+                                                <svg
+                                                    className="h-5 w-5 ml-0.5"
+                                                    fill="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
+
+                                        <button
+                                            onClick={() => skip(5)}
+                                            className="group flex h-10 items-center gap-1.5 rounded-full bg-white/5 px-4 text-white/60 transition-all hover:bg-white/10 hover:text-white"
+                                            title="Avancer de 5 secondes"
+                                        >
+                                            <span className="text-xs font-medium">5s</span>
+                                            <svg
+                                                className="h-4 w-4"
+                                                fill="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {/* Right: Subtitles */}
+                                    <div
+                                        className="flex items-center justify-end"
+                                        style={{ width: '148px' }}
+                                    >
+                                        <button
+                                            onClick={() => setShowSubtitlesOverlay(v => !v)}
+                                            className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
+                                                showSubtitlesOverlay
+                                                    ? 'bg-violet-500/10 text-secondary'
+                                                    : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
+                                            }`}
+                                            title="Afficher les sous-titres"
+                                        >
+                                            <svg
+                                                className="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth={2}
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Keyboard shortcuts hint */}
                                 <div className="mt-4 flex justify-center gap-6 text-[10px] text-white/20">
                                     <span className="flex items-center gap-1.5">
-                                        <kbd className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-white/40">Space</kbd>
-                                        <span>Play</span>
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
                                         <kbd className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-white/40">&larr;</kbd>
                                         <span>-5s</span>
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <kbd className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-white/40">Space</kbd>
+                                        <span>Play</span>
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <kbd className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-white/40">&rarr;</kbd>
