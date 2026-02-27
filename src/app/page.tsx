@@ -238,7 +238,7 @@ export default function Home() {
             {/* Header */}
             <header className="grid h-12 shrink-0 grid-cols-3 items-center border-b border-white/5 bg-[#09090b] px-5">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
                         <svg
                             className="h-4 w-4 text-white"
                             fill="none"
@@ -287,12 +287,13 @@ export default function Home() {
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                     >
-                        <div className="group relative flex flex-col items-center justify-center gap-5 rounded-2xl border border-white/10 bg-white/[0.02] p-14 backdrop-blur-sm transition-all hover:border-violet-500/50 hover:bg-white/[0.04]">
-                            <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-violet-500/10 opacity-0 blur-xl transition-opacity group-hover:opacity-100" />
-
-                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 ring-1 ring-white/10">
+                        <div
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex flex-col items-center justify-center gap-5 rounded-2xl border border-white/10 bg-white/[0.02] p-14 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-white/[0.04] cursor-pointer"
+                        >
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-white/10">
                                 <svg
-                                    className="h-8 w-8 text-violet-400"
+                                    className="h-8 w-8 text-primary"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -309,12 +310,6 @@ export default function Home() {
                                 <p className="text-base font-medium text-white/90">Importer une vidéo</p>
                                 <p className="mt-1.5 text-sm text-white/40">Glissez-déposez ou cliquez pour sélectionner</p>
                             </div>
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-violet-500/40 hover:brightness-110"
-                            >
-                                Parcourir
-                            </button>
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -357,7 +352,7 @@ export default function Home() {
 
                                         {/* Progress */}
                                         <div
-                                            className="absolute h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                                            className="absolute h-1.5 rounded-full bg-gradient-to-r from-secondary to-primary"
                                             style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                                         />
 
@@ -411,7 +406,7 @@ export default function Home() {
                                     {/* Play/Pause */}
                                     <button
                                         onClick={togglePlay}
-                                        className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30 transition-all hover:shadow-violet-500/50 hover:brightness-110"
+                                        className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/85 text-white transition-all hover:bg-primary"
                                         title={isPlaying ? 'Pause' : 'Lecture'}
                                     >
                                         {isPlaying ? (
@@ -450,33 +445,30 @@ export default function Home() {
                                     </button>
 
                                     {/* Show subtitle */}
-                                    {subtitles.length > 0 && (
-                                        <>
-                                            <div className="mx-2 h-6 w-px bg-white/10" />
-                                            <button
-                                                onClick={() => setShowSubtitlesOverlay(v => !v)}
-                                                className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
-                                                    showSubtitlesOverlay
-                                                        ? 'bg-violet-500/20 text-violet-400'
-                                                        : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
-                                                }`}
-                                            >
-                                                <svg
-                                                    className="h-4 w-4"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth={2}
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </>
-                                    )}
+                                    <div className="mx-2 h-6 w-px bg-white/10" />
+                                    <button
+                                        onClick={() => setShowSubtitlesOverlay(v => !v)}
+                                        className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
+                                            showSubtitlesOverlay
+                                                ? 'bg-primary/10 text-secondary'
+                                                : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
+                                        }`}
+                                        title="Afficher les sous-titres"
+                                    >
+                                        <svg
+                                            className="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+                                            />
+                                        </svg>
+                                    </button>
                                 </div>
 
                                 {/* Keyboard shortcuts hint */}
@@ -550,11 +542,12 @@ export default function Home() {
                             {/* Processing state */}
                             {isProcessing && (
                                 <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                                         <svg
-                                            className="h-6 w-6 animate-spin text-violet-400"
+                                            className="h-6 w-6 animate-spin text-primary"
                                             fill="none"
                                             viewBox="0 0 24 24"
+                                            shapeRendering="geometricPrecision"
                                         >
                                             <circle
                                                 className="opacity-25"
@@ -624,7 +617,7 @@ export default function Home() {
                                 <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
                                     <button
                                         onClick={handleTranscribe}
-                                        className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-violet-500/40 hover:brightness-110"
+                                        className="flex items-center gap-2 rounded-lg bg-primary/85 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-primary"
                                     >
                                         <svg
                                             className="h-4 w-4"
@@ -656,7 +649,7 @@ export default function Home() {
                                             data-sub-id={sub.id}
                                             onClick={() => seekTo(sub.start)}
                                             className={`w-full text-left px-4 py-3 border-b border-white/5 transition-all hover:bg-white/5 ${
-                                                activeSubtitle?.id === sub.id ? 'bg-violet-500/10 border-l-2 border-l-violet-500' : ''
+                                                activeSubtitle?.id === sub.id ? 'bg-primary/10' : ''
                                             }`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
